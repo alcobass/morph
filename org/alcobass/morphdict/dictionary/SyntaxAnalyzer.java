@@ -86,10 +86,10 @@ public class SyntaxAnalyzer
 		sd = new SimpleTextDictionary();
 		sd.loadFromZal("lexeme.short.utf");
 		
-		sd.saveBitVectors();
+		sd.saveDictionary();
 		
 		
-		System.out.println(sd.getWordsByMorphFlags(01L));
+		//System.out.println(sd.getWordsByMorphFlags(01L));
 		
 		return;
 	}

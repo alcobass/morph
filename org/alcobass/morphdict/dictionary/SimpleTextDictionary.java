@@ -1,14 +1,19 @@
 package org.alcobass.morphdict.dictionary;
 
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.zip.GZIPOutputStream;
 
 public class SimpleTextDictionary implements Dictionary
 {
@@ -18,8 +23,8 @@ public class SimpleTextDictionary implements Dictionary
 	 */
 	String russianLetters = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя-";
 	
-	private final static String LETTER_BIT_ARRAY_FILE_PATTERN = "out/letter_%i.out";
-	private final static String MORPH_BIT_ARRAY_FILE_PATTERN = "out/morph_%i.out";
+	private final static String LETTER_BIT_ARRAY_FILE_PATTERN = "out/letter_%d.out";
+	private final static String MORPH_BIT_ARRAY_FILE_PATTERN = "out/morph_%d.out";
 
 	/**
 	 * Full list of words
@@ -210,24 +215,51 @@ public class SimpleTextDictionary implements Dictionary
 		}
 	}
 	
-	public void saveBitVectors()
+	public void saveDictionary()
+	{
+		saveWordsCompressed();
+		saveBitVectors();
+	}
+	
+	private void saveWordsCompressed() 
+	{
+		try 
+		{
+			GZIPOutputStream zos = new GZIPOutputStream(new FileOutputStream(new File("out/words.dat")));
+			PrintWriter pw = new PrintWriter(zos);
+			for (String str : wordList)
+				pw.println(str);
+			zos.close();
+		} 
+		catch (FileNotFoundException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	private void saveBitVectors()
 	{
 		try
 		{
 			for (int i = 0; i < letterBitArrays.size(); i++)
 			{
 				FileOutputStream f = new FileOutputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
+				DataOutputStream dos = new DataOutputStream(f);
 				byte[] arr = letterBitArrays.get(i);
-				for (int j = 0; j < arr.length; j++)
-					f.write(arr[j]);
+				dos.write(arr);
+				/*for (int j = 0; j < arr.length; j++)
+					f.write(arr[j]);*/
 				f.close();
 			}
 			for (int i = 0; i < morphArray.size(); i++)
 			{
 				FileOutputStream f = new FileOutputStream(new File(String.format(MORPH_BIT_ARRAY_FILE_PATTERN, i)));
+				DataOutputStream dos = new DataOutputStream(f);
 				byte[] arr = morphArray.get(i);
-				for (int j = 0; j < arr.length; j++)
-					f.write(arr[j]);
+				dos.write(arr);
 				f.close();
 			}
 		} catch (IOException e)
