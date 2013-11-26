@@ -1,17 +1,13 @@
 package org.alcobass.morphdict.dictionary;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Scanner;
 
 public class SimpleTextDictionary implements Dictionary
@@ -35,13 +31,13 @@ public class SimpleTextDictionary implements Dictionary
 	/**
 	 * Bit-arrays for letters
 	 */
-	ArrayList<char[]> letterBitArrays;
+	ArrayList<byte[]> letterBitArrays;
 	ArrayList<Long> params = new ArrayList<Long>();
 
 	/**
 	 * Bit-arrays for morphological markers
 	 */
-	ArrayList<char[]> morphArray;
+	ArrayList<byte[]> morphArray;
 
 	int extraWords = 0;
 
@@ -138,7 +134,7 @@ public class SimpleTextDictionary implements Dictionary
 				System.out.println("Bad symbol " + k);
 				continue;
 			}
-			letterBitArrays.get(listIndex)[index] = (char) (letterBitArrays.get(listIndex)[index] | masks[cur % 8]);
+			letterBitArrays.get(listIndex)[index] = (byte) (letterBitArrays.get(listIndex)[index] | masks[cur % 8]);
 			letters |= 1L << listIndex;
 
 		}
@@ -155,7 +151,7 @@ public class SimpleTextDictionary implements Dictionary
 		{
 			long fl = 1L << i;
 			if ((params.get(cur) & fl) != 0)
-				morphArray.get(i)[index] = (char) (morphArray.get(i)[index] | mask);
+				morphArray.get(i)[index] = (byte) (morphArray.get(i)[index] | mask);
 		}
 	}
 
@@ -166,17 +162,17 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		System.out.println("Initializing bit arrays...");
 		int singleArraySize = wordList.size() / 8;
-		letterBitArrays = new ArrayList<char[]>();
+		letterBitArrays = new ArrayList<byte[]>();
 		for (int i = 0; i < russianLetters.length(); i++)
 		{
-			letterBitArrays.add(new char[singleArraySize]);
+			letterBitArrays.add(new byte[singleArraySize]);
 
 		}
 
-		morphArray = new ArrayList<char[]>();
+		morphArray = new ArrayList<byte[]>();
 		for (int i = 0; i < MorphologicalFlags.ParArraySize; i++)
 		{
-			morphArray.add(new char[singleArraySize]);
+			morphArray.add(new byte[singleArraySize]);
 		}
 
 		int cur = 0;
@@ -195,12 +191,16 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		try
 		{
-			letterBitArrays = new ArrayList<char[]>();
+			letterBitArrays = new ArrayList<byte[]>();
 			for (int i=0; i<russianLetters.length(); i++) 
 			{
-				FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
-				char[] curLetterBitArray = new char[wordList.size() / 8 + 1];
-				while ()FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
+				File f = new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i));
+				byte[] curLetterBitArray = new byte[(int) f.length() / 8 + 1];
+				DataInputStream dis = new DataInputStream(new FileInputStream(f));
+				dis.readFully(curLetterBitArray);
+				dis.close();
+				letterBitArrays.add(curLetterBitArray);
+				//while ()FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
 			}
 			
 		}
@@ -217,17 +217,17 @@ public class SimpleTextDictionary implements Dictionary
 			for (int i = 0; i < letterBitArrays.size(); i++)
 			{
 				FileOutputStream f = new FileOutputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
-				char[] arr = letterBitArrays.get(i);
+				byte[] arr = letterBitArrays.get(i);
 				for (int j = 0; j < arr.length; j++)
-					f.write((byte) (arr[j]));
+					f.write(arr[j]);
 				f.close();
 			}
 			for (int i = 0; i < morphArray.size(); i++)
 			{
 				FileOutputStream f = new FileOutputStream(new File(String.format(MORPH_BIT_ARRAY_FILE_PATTERN, i)));
-				char[] arr = morphArray.get(i);
+				byte[] arr = morphArray.get(i);
 				for (int j = 0; j < arr.length; j++)
-					f.write((byte) (arr[j]));
+					f.write(arr[j]);
 				f.close();
 			}
 		} catch (IOException e)
@@ -270,7 +270,7 @@ public class SimpleTextDictionary implements Dictionary
 
 			// int offset = letterOffset.get(letters[i]);
 
-			char letter[] = letterBitArrays.get(russianLetters.indexOf(letters[i]));
+			byte letter[] = letterBitArrays.get(russianLetters.indexOf(letters[i]));
 
 			for (int j = 0; j < andResult.length; j++)
 			{
@@ -303,20 +303,20 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		List<String> res = new ArrayList<String>();
 
-		char[] andResult = new char[wordList.size() / 8];
+		byte[] andResult = new byte[wordList.size() / 8];
 
 		// Fill with nulls
 		for (int i = 0; i < andResult.length; i++)
-			andResult[i] = 0xFF;
+			andResult[i] = (byte) 0xFF;
 
 		List<Integer> columns = MorphologicalFlags.getIndexesForFlagSet(flags);
 
 		for (int i = 0; i < columns.size(); i++)
 		{
-			char cur[] = morphArray.get(columns.get(i));
+			byte cur[] = morphArray.get(columns.get(i));
 			for (int j = 0; j < andResult.length; j++)
 			{
-				andResult[j] = (char) (((byte) andResult[j]) & ((byte) cur[j]));
+				andResult[j] = (byte) (andResult[j] & cur[j]);
 			}
 		}
 		for (int i = 0; i < andResult.length; i++)
