@@ -84,9 +84,11 @@ public class SyntaxAnalyzer
 	{
 		
 		sd = new SimpleTextDictionary();
-		sd.loadFromZal("lexeme.short.utf");
+		/*sd.loadFromZal("lexeme.short.utf");
 		
 		sd.saveDictionary();
+		*/
+		sd.loadDictionary();
 		
 		
 		//System.out.println(sd.getWordsByMorphFlags(01L));

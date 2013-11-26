@@ -1,18 +1,19 @@
 package org.alcobass.morphdict.dictionary;
 
-import java.io.BufferedWriter;
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class SimpleTextDictionary implements Dictionary
@@ -23,8 +24,8 @@ public class SimpleTextDictionary implements Dictionary
 	 */
 	String russianLetters = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя-";
 	
-	private final static String LETTER_BIT_ARRAY_FILE_PATTERN = "out/letter_%d.out";
-	private final static String MORPH_BIT_ARRAY_FILE_PATTERN = "out/morph_%d.out";
+	private final static String LETTER_BIT_ARRAY_FILE_PATTERN = "out/letter_%d.dat";
+	private final static String MORPH_BIT_ARRAY_FILE_PATTERN = "out/morph_%d.dat";
 
 	/**
 	 * Full list of words
@@ -115,10 +116,16 @@ public class SimpleTextDictionary implements Dictionary
 	public void loadFromZal(String fileName)
 	{
 		loadWordArrayFromZal(fileName);
-		initBitArrays();
-		System.out.println("fuck off");
+		calcBitArrays();
 	}
 
+	public void loadDictionary()
+	{
+		loadWordsCompressed();
+		loadBitVectors();
+	}
+
+	
 	/**
 	 * Process single word while loading from Zalyznyak dictionary
 	 * @param cur - current index
@@ -163,7 +170,7 @@ public class SimpleTextDictionary implements Dictionary
 	/**
 	 * Create bit-arrays by word list
 	 */
-	void initBitArrays()
+	void calcBitArrays()
 	{
 		System.out.println("Initializing bit arrays...");
 		int singleArraySize = wordList.size() / 8;
@@ -201,12 +208,25 @@ public class SimpleTextDictionary implements Dictionary
 			{
 				File f = new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i));
 				byte[] curLetterBitArray = new byte[(int) f.length() / 8 + 1];
-				DataInputStream dis = new DataInputStream(new FileInputStream(f));
+				DataInputStream dis = new DataInputStream(new GZIPInputStream(new FileInputStream(f)));
 				dis.readFully(curLetterBitArray);
 				dis.close();
 				letterBitArrays.add(curLetterBitArray);
 				//while ()FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
 			}
+			
+			morphArray = new ArrayList<byte[]>();
+			for (int i=0; i<MorphologicalFlags.ParArraySize; i++) 
+			{
+				File f = new File(String.format(MORPH_BIT_ARRAY_FILE_PATTERN, i));
+				byte[] curLetterBitArray = new byte[(int) f.length() / 8 + 1];
+				DataInputStream dis = new DataInputStream(new GZIPInputStream(new FileInputStream(f)));
+				dis.readFully(curLetterBitArray);
+				dis.close();
+				morphArray.add(curLetterBitArray);
+				//while ()FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
+			}
+					
 			
 		}
 		catch (IOException e) 
@@ -219,6 +239,49 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		saveWordsCompressed();
 		saveBitVectors();
+	}
+	
+	private void loadWordsCompressed()
+	{
+		try 
+		{
+			wordList = new ArrayList<String>();
+			long nanoBegin = System.nanoTime();
+			System.out.println("Started loading compressed words");
+			GZIPInputStream zis = new GZIPInputStream(new FileInputStream(new File("out/words.dat")));
+			BufferedReader br = new BufferedReader(new InputStreamReader(zis));
+			
+			while (true)
+			{
+				String s = br.readLine();
+				if (s==null) 
+				{
+					break;
+				}
+				wordList.add(s);
+			}
+			
+			br.close();
+			
+			//Scanner s = new Scanner(zis);
+			//while (s.hasNext()) {
+			//	wordList.add(s.next());
+			//}
+			//s.close();
+			
+			long nanoEnd = System.nanoTime();
+			System.out.println("Finished loading compressed words. time = " + (nanoEnd - nanoBegin));
+		} 
+		catch (FileNotFoundException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		catch (IOException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	private void saveWordsCompressed() 
@@ -247,7 +310,8 @@ public class SimpleTextDictionary implements Dictionary
 			for (int i = 0; i < letterBitArrays.size(); i++)
 			{
 				FileOutputStream f = new FileOutputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
-				DataOutputStream dos = new DataOutputStream(f);
+				GZIPOutputStream zos = new GZIPOutputStream(f);
+				DataOutputStream dos = new DataOutputStream(zos);
 				byte[] arr = letterBitArrays.get(i);
 				dos.write(arr);
 				/*for (int j = 0; j < arr.length; j++)
@@ -257,7 +321,8 @@ public class SimpleTextDictionary implements Dictionary
 			for (int i = 0; i < morphArray.size(); i++)
 			{
 				FileOutputStream f = new FileOutputStream(new File(String.format(MORPH_BIT_ARRAY_FILE_PATTERN, i)));
-				DataOutputStream dos = new DataOutputStream(f);
+				GZIPOutputStream zos = new GZIPOutputStream(f);
+				DataOutputStream dos = new DataOutputStream(zos);
 				byte[] arr = morphArray.get(i);
 				dos.write(arr);
 				f.close();
