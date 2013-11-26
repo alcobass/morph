@@ -316,7 +316,7 @@ public class SimpleTextDictionary implements Dictionary
 				dos.write(arr);
 				/*for (int j = 0; j < arr.length; j++)
 					f.write(arr[j]);*/
-				f.close();
+				dos.close();
 			}
 			for (int i = 0; i < morphArray.size(); i++)
 			{
@@ -325,7 +325,7 @@ public class SimpleTextDictionary implements Dictionary
 				DataOutputStream dos = new DataOutputStream(zos);
 				byte[] arr = morphArray.get(i);
 				dos.write(arr);
-				f.close();
+				dos.close();
 			}
 		} catch (IOException e)
 		{
