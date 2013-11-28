@@ -82,15 +82,15 @@ public class SyntaxAnalyzer
 	{
 		
 		sd = new SimpleTextDictionary();
-		//sd.loadFromZal("lexeme.short.utf");
+		sd.loadFromZal("lexeme.short.utf");
 		
-		//sd.saveDictionary();
+		sd.saveDictionary();
 		
-		sd.loadDictionary();
+		//sd.loadDictionary();
 		
 		
 		//System.out.println(sd.getWordsWithLetters("параша"));
-		System.out.println(sd.getWordsByMorphFlags((long) 0x0004));
+		//System.out.println(sd.getWordsByMorphFlags((long) 0x0004));
 		
 		
 		return;

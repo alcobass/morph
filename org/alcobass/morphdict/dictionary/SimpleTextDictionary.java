@@ -218,7 +218,7 @@ public class SimpleTextDictionary implements Dictionary
 		}
 		catch (IOException e) 
 		{
-			
+			e.printStackTrace();
 		}
 	}
 	
@@ -304,6 +304,7 @@ public class SimpleTextDictionary implements Dictionary
 				/*for (int j = 0; j < arr.length; j++)
 					f.write(arr[j]);*/
 				dos.close();
+				f.close();
 			}
 			for (int i = 0; i < morphArray.size(); i++)
 			{
@@ -313,6 +314,7 @@ public class SimpleTextDictionary implements Dictionary
 				byte[] arr = morphArray.get(i).toByteArray();
 				dos.write(arr);
 				dos.close();
+				f.close();
 			}
 		} catch (IOException e)
 		{
