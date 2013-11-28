@@ -1,8 +1,5 @@
 package org.alcobass.morphdict.dictionary;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 
 public class SyntaxAnalyzer
 {
@@ -10,6 +7,7 @@ public class SyntaxAnalyzer
 	final static int BUFFER_LENGTH = 1024;
 	static SimpleTextDictionary sd;
 	//char[] buffer = new char[1024];
+	/*
 	public static ArrayList<SingleWordNode> parseStream(InputStream stream)
 	        throws IOException// throws IOException
 	{
@@ -76,7 +74,7 @@ public class SyntaxAnalyzer
 
 		return res;
 	}
-
+*/
 	/**
 	 * @param args
 	 */
@@ -84,14 +82,16 @@ public class SyntaxAnalyzer
 	{
 		
 		sd = new SimpleTextDictionary();
-		sd.loadFromZal("lexeme.short.utf");
+		//sd.loadFromZal("lexeme.short.utf");
 		
-		sd.saveDictionary();
+		//sd.saveDictionary();
 		
-		//sd.loadDictionary();
+		sd.loadDictionary();
 		
 		
-		//System.out.println(sd.getWordsByMorphFlags(01L));
+		//System.out.println(sd.getWordsWithLetters("параша"));
+		System.out.println(sd.getWordsByMorphFlags((long) 0x0004));
+		
 		
 		return;
 	}

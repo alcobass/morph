@@ -1,5 +1,6 @@
 package org.alcobass.morphdict.dictionary;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
@@ -37,19 +39,15 @@ public class SimpleTextDictionary implements Dictionary
 	/**
 	 * Bit-arrays for letters
 	 */
-	ArrayList<byte[]> letterBitArrays;
+	ArrayList<BitSet> letterBitArrays;
 	ArrayList<Long> params = new ArrayList<Long>();
 
 	/**
 	 * Bit-arrays for morphological markers
 	 */
-	ArrayList<byte[]> morphArray;
+	ArrayList<BitSet> morphArray;
 
 	int extraWords = 0;
-
-	private final char masks[] =
-	{ 128, 64, 32, 16, 8, 4, 2, 1 };
-
 	public SimpleTextDictionary()
 	{
 
@@ -61,9 +59,10 @@ public class SimpleTextDictionary implements Dictionary
 		try
 		{
 			FileInputStream file = new FileInputStream(fileName);
+			BufferedInputStream bis = new BufferedInputStream(file);
 
 			int cnt = 0;
-			Scanner sc = new Scanner(file);
+			Scanner sc = new Scanner(bis);
 			System.out.println("Loading dictionary...");
 			while (sc.hasNextLine())
 			{
@@ -133,9 +132,7 @@ public class SimpleTextDictionary implements Dictionary
 	void buildSingleWordBitArray(int cur)
 	{
 		String word = wordList.get(cur);
-		int index = cur / 8;
-		int mask = masks[cur % 8];
-		Long letters = 0L;
+
 		for (int i = 0; i < word.length(); i++)
 		{
 			char k = word.charAt(i);
@@ -146,24 +143,14 @@ public class SimpleTextDictionary implements Dictionary
 				System.out.println("Bad symbol " + k);
 				continue;
 			}
-			letterBitArrays.get(listIndex)[index] = (byte) (letterBitArrays.get(listIndex)[index] | masks[cur % 8]);
-			letters |= 1L << listIndex;
+			letterBitArrays.get(listIndex).set(cur);
+		}
 
-		}
-		/*
-		if (sameCount.containsKey(letters))
-		{
-			sameCount.put(letters, sameCount.get(letters) + 1);
-		} else
-		{
-			sameCount.put(letters, 1);
-		}
-		*/
 		for (int i = 0; i < MorphologicalFlags.ParArraySize; i++)
 		{
 			long fl = 1L << i;
 			if ((params.get(cur) & fl) != 0)
-				morphArray.get(i)[index] = (byte) (morphArray.get(i)[index] | mask);
+				morphArray.get(i).set(cur);
 		}
 	}
 
@@ -174,17 +161,17 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		System.out.println("Initializing bit arrays...");
 		int singleArraySize = wordList.size() / 8;
-		letterBitArrays = new ArrayList<byte[]>();
+		letterBitArrays = new ArrayList<BitSet>();
 		for (int i = 0; i < russianLetters.length(); i++)
 		{
-			letterBitArrays.add(new byte[singleArraySize]);
+			letterBitArrays.add(new BitSet(singleArraySize));
 
 		}
 
-		morphArray = new ArrayList<byte[]>();
+		morphArray = new ArrayList<BitSet>();
 		for (int i = 0; i < MorphologicalFlags.ParArraySize; i++)
 		{
-			morphArray.add(new byte[singleArraySize]);
+			morphArray.add(new BitSet(singleArraySize));
 		}
 
 		int cur = 0;
@@ -203,27 +190,27 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		try
 		{
-			letterBitArrays = new ArrayList<byte[]>();
+			letterBitArrays = new ArrayList<BitSet>();
 			for (int i=0; i<russianLetters.length(); i++) 
 			{
 				File f = new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i));
-				byte[] curLetterBitArray = new byte[(int) f.length() / 8 + 1];
+				byte[] curLetterBitArray = new byte[(int) wordList.size() / 8 + 1];
 				DataInputStream dis = new DataInputStream(new GZIPInputStream(new FileInputStream(f)));
 				dis.readFully(curLetterBitArray);
 				dis.close();
-				letterBitArrays.add(curLetterBitArray);
+				letterBitArrays.add(BitSet.valueOf(curLetterBitArray));
 				//while ()FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
 			}
 			
-			morphArray = new ArrayList<byte[]>();
+			morphArray = new ArrayList<BitSet>();
 			for (int i=0; i<MorphologicalFlags.ParArraySize; i++) 
 			{
 				File f = new File(String.format(MORPH_BIT_ARRAY_FILE_PATTERN, i));
-				byte[] curLetterBitArray = new byte[(int) f.length() / 8 + 1];
+				byte[] curLetterBitArray = new byte[(int) wordList.size() / 8 + 1];
 				DataInputStream dis = new DataInputStream(new GZIPInputStream(new FileInputStream(f)));
 				dis.readFully(curLetterBitArray);
 				dis.close();
-				morphArray.add(curLetterBitArray);
+				morphArray.add(BitSet.valueOf(curLetterBitArray));
 				//while ()FileInputStream fis = new FileInputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
 			}
 					
@@ -312,7 +299,7 @@ public class SimpleTextDictionary implements Dictionary
 				FileOutputStream f = new FileOutputStream(new File(String.format(LETTER_BIT_ARRAY_FILE_PATTERN, i)));
 				GZIPOutputStream zos = new GZIPOutputStream(f);
 				DataOutputStream dos = new DataOutputStream(zos);
-				byte[] arr = letterBitArrays.get(i);
+				byte[] arr = letterBitArrays.get(i).toByteArray();
 				dos.write(arr);
 				/*for (int j = 0; j < arr.length; j++)
 					f.write(arr[j]);*/
@@ -323,7 +310,7 @@ public class SimpleTextDictionary implements Dictionary
 				FileOutputStream f = new FileOutputStream(new File(String.format(MORPH_BIT_ARRAY_FILE_PATTERN, i)));
 				GZIPOutputStream zos = new GZIPOutputStream(f);
 				DataOutputStream dos = new DataOutputStream(zos);
-				byte[] arr = morphArray.get(i);
+				byte[] arr = morphArray.get(i).toByteArray();
 				dos.write(arr);
 				dos.close();
 			}
@@ -345,49 +332,32 @@ public class SimpleTextDictionary implements Dictionary
 	 * @param letters
 	 * @return list of words
 	 */
-	public List<String> getWordsWithLetters(char[] letters)
+	public List<String> getWordsWithLetters(String letters)
 	{
 		ArrayList<String> res = new ArrayList<String>();
 
 		if (letters == null)
+		{
 			return res;
-
-		char[] andResult = new char[wordList.size() / 8];
-
-		// Fill with nulls
-		for (int i = 0; i < andResult.length; i++)
-			andResult[i] = 0xFF;
-
-		for (int i = 0; i < letters.length; i++)
+		}
+		
+		BitSet resultBitSet = new BitSet(wordList.size());
+		resultBitSet.set(0, wordList.size());
+		
+		for (int i = 0; i < letters.length(); i++)
 		{
-			if (russianLetters.indexOf(letters[i]) == -1)
+			if (russianLetters.indexOf(letters.charAt(i)) == -1)
 			{
 				continue;
 			}
-
-			// int offset = letterOffset.get(letters[i]);
-
-			byte letter[] = letterBitArrays.get(russianLetters.indexOf(letters[i]));
-
-			for (int j = 0; j < andResult.length; j++)
-			{
-				andResult[j] = (char) (((byte) andResult[j]) & ((byte) letter[j]));
-			}
+			resultBitSet.and(letterBitArrays.get(russianLetters.indexOf(letters.charAt(i))));
 		}
 
-		for (int i = 0; i < andResult.length; i++)
+		for (int i = resultBitSet.nextSetBit(0); i >= 0; i = resultBitSet.nextSetBit(i+1)) 
 		{
-			if (andResult[i] == 0x00)
-				continue;
-
-			for (int j = 0; j < 8; j++)
-			{
-				if ((andResult[i] & masks[j]) != 0x00)
-					res.add(wordList.get(i * 8 + j));
-				;
-			}
-		}
-
+			res.add(wordList.get(i));
+        }
+		
 		return res;
 	}
 
@@ -400,34 +370,20 @@ public class SimpleTextDictionary implements Dictionary
 	{
 		List<String> res = new ArrayList<String>();
 
-		byte[] andResult = new byte[wordList.size() / 8];
-
-		// Fill with nulls
-		for (int i = 0; i < andResult.length; i++)
-			andResult[i] = (byte) 0xFF;
-
+		BitSet resultBitSet = new BitSet(wordList.size());
+		resultBitSet.set(0, wordList.size());
+		
 		List<Integer> columns = MorphologicalFlags.getIndexesForFlagSet(flags);
 
 		for (int i = 0; i < columns.size(); i++)
 		{
-			byte cur[] = morphArray.get(columns.get(i));
-			for (int j = 0; j < andResult.length; j++)
-			{
-				andResult[j] = (byte) (andResult[j] & cur[j]);
-			}
+			resultBitSet.and(morphArray.get(columns.get(i)));
 		}
-		for (int i = 0; i < andResult.length; i++)
-		{
-			if (andResult[i] == 0x00)
-				continue;
 
-			for (int j = 0; j < 8; j++)
-			{
-				if ((andResult[i] & masks[j]) != 0x00)
-					res.add(wordList.get(i * 8 + j));
-				;
-			}
-		}
+		for (int i = resultBitSet.nextSetBit(0); i >= 0; i = resultBitSet.nextSetBit(i+1)) 
+		{
+			res.add(wordList.get(i));
+        }
 		return res;
 	}
 }
